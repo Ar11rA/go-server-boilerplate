@@ -1,0 +1,10 @@
+# packages
+vendor
+
+# editor
+.idea
+.vscode
+debug*
+
+# binaries
+go-server-boilerplate
