@@ -8,3 +8,10 @@ type User struct {
 	Email    string `json:"email"`
 	Phone    string `json:"phone"`
 }
+
+// UserDTO response
+type UserDTO struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	Phone string `json:"phone"`
+}
