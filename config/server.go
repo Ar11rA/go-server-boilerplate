@@ -6,11 +6,36 @@ import (
 	"go/go-server-boilerplate/repository"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	// postgres connection
 	_ "github.com/lib/pq"
 )
+
+// Middleware ...
+type Middleware func(http.HandlerFunc) http.HandlerFunc
+
+// Logging ...
+func Logging() Middleware {
+	return func(f http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
+			defer func() {
+				log.Println(r.URL.Path, time.Since(start))
+			}()
+			f(w, r)
+		}
+	}
+}
+
+// Chain applies middlewares to a http.HandlerFunc
+func Chain(f http.HandlerFunc, middlewares ...Middleware) http.HandlerFunc {
+	for _, m := range middlewares {
+		f = m(f)
+	}
+	return f
+}
 
 // Server object
 type Server struct {
@@ -41,8 +66,8 @@ func (s *Server) InitializeEntities() {
 // InitializeRoutes - add api Routes
 func (s *Server) InitializeRoutes() {
 	router := mux.NewRouter()
-	router.HandleFunc("/users", s.userHandler.GetUsers).Methods("GET")
-	router.HandleFunc("/users", s.userHandler.CreateUser).Methods("POST")
+	router.HandleFunc("/users", Chain(s.userHandler.GetUsers, Logging())).Methods("GET")
+	router.HandleFunc("/users", Chain(s.userHandler.CreateUser, Logging())).Methods("POST")
 	router.HandleFunc("/users/{id:[0-9]+}", s.userHandler.GetUser).Methods("GET")
 	router.HandleFunc("/users/{id:[0-9]+}", s.userHandler.UpdateUser).Methods("PUT")
 	router.HandleFunc("/users/{id:[0-9]+}", s.userHandler.DeleteUser).Methods("DELETE")
