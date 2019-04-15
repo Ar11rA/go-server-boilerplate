@@ -1,0 +1,43 @@
+version: 2
+jobs:
+  build:
+    working_directory: /go/src/github.com/your_company/your_app
+    docker:
+      - image: circleci/golang:1.10.0
+    environment:
+      - GOCACHE: "/tmp/go/cache"
+      - DEP_VERSION: 0.4.1
+    steps:
+      - run: git config --global url.ssh://git@github.com/your_company.insteadOf https://github.com/your_company
+      - checkout
+      - restore_cache:
+          key: gopkg-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+          paths:
+              - /go/src/github.com/your_company/your_app/vendor
+      - run:
+          name: download-libraries
+          command: |
+            if [ ! -d /go/src/github.com/your_company/your_app/vendor ]; then
+                curl -L -s https://github.com/golang/dep/releases/download/v${DEP_VERSION}/dep-linux-amd64 -o /go/bin/dep
+                chmod +x /go/bin/dep
+                /go/bin/dep ensure
+            fi
+      - save_cache:
+          key: gopkg-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+          paths:
+              - /go/src/github.com/your_company/your_app/vendor
+      - restore_cache:
+          keys:
+              - build-cache-{{ .Branch }}-{{ .Environment.CIRCLE_PREVIOUS_BUILD_NUM }}
+          paths:
+              - /tmp/go/cache
+      - run:
+          name: test
+          command: |
+            mkdir -p $GOCACHE
+            go build -v
+            go test -p 6 -race ./...
+      - save_cache:
+          key: build-cache-{{ .Branch }}-{{ .Environment.CIRCLE_BUILD_NUM }}
+          paths:
+              - /tmp/go/cache
